@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import QRCodeStyling, { DotType, CornerSquareType, CornerDotType } from 'qr-code-styling';
 import { Download, Upload, Palette, Square, Circle, RectangleHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,30 @@ interface QRSettings {
   logo: string | null;
   logoSize: number;
 }
+
+const getStyleConfig = (style: QRStyle): { dotsType: DotType; cornersSquareType: CornerSquareType; cornersDotType: CornerDotType } => {
+  switch (style) {
+    case 'dots':
+      return { 
+        dotsType: 'dots', 
+        cornersSquareType: 'dot',
+        cornersDotType: 'dot'
+      };
+    case 'rounded':
+      return { 
+        dotsType: 'rounded', 
+        cornersSquareType: 'extra-rounded',
+        cornersDotType: 'dot'
+      };
+    case 'squares':
+    default:
+      return { 
+        dotsType: 'square', 
+        cornersSquareType: 'square',
+        cornersDotType: 'square'
+      };
+  }
+};
 
 const StyleButton = ({ 
   active, 
@@ -86,6 +110,74 @@ export const QRCodeGenerator = () => {
 
   const qrRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrCodeRef = useRef<QRCodeStyling | null>(null);
+
+  // Initialize QR code
+  useEffect(() => {
+    const styleConfig = getStyleConfig(settings.style);
+    
+    qrCodeRef.current = new QRCodeStyling({
+      width: 280,
+      height: 280,
+      data: settings.content || 'https://lovable.dev',
+      dotsOptions: {
+        color: settings.fgColor,
+        type: styleConfig.dotsType,
+      },
+      cornersSquareOptions: {
+        color: settings.fgColor,
+        type: styleConfig.cornersSquareType,
+      },
+      cornersDotOptions: {
+        color: settings.fgColor,
+        type: styleConfig.cornersDotType,
+      },
+      backgroundOptions: {
+        color: settings.bgColor,
+      },
+      imageOptions: {
+        crossOrigin: 'anonymous',
+        margin: 8,
+        imageSize: 0.4,
+      },
+      image: settings.logo || undefined,
+      qrOptions: {
+        errorCorrectionLevel: 'H',
+      },
+    });
+
+    if (qrRef.current) {
+      qrRef.current.innerHTML = '';
+      qrCodeRef.current.append(qrRef.current);
+    }
+  }, []);
+
+  // Update QR code when settings change
+  useEffect(() => {
+    if (qrCodeRef.current) {
+      const styleConfig = getStyleConfig(settings.style);
+      
+      qrCodeRef.current.update({
+        data: settings.content || 'https://lovable.dev',
+        dotsOptions: {
+          color: settings.fgColor,
+          type: styleConfig.dotsType,
+        },
+        cornersSquareOptions: {
+          color: settings.fgColor,
+          type: styleConfig.cornersSquareType,
+        },
+        cornersDotOptions: {
+          color: settings.fgColor,
+          type: styleConfig.cornersDotType,
+        },
+        backgroundOptions: {
+          color: settings.bgColor,
+        },
+        image: settings.logo || undefined,
+      });
+    }
+  }, [settings]);
 
   const updateSetting = <K extends keyof QRSettings>(key: K, value: QRSettings[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -110,34 +202,13 @@ export const QRCodeGenerator = () => {
   };
 
   const downloadQR = useCallback(() => {
-    const canvas = qrRef.current?.querySelector('canvas');
-    if (canvas) {
-      const url = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = 'qr-code.png';
-      link.href = url;
-      link.click();
+    if (qrCodeRef.current) {
+      qrCodeRef.current.download({ 
+        name: 'qr-code',
+        extension: 'png'
+      });
     }
   }, []);
-
-  const getQRRenderProps = () => {
-    const baseProps = {
-      value: settings.content || 'https://lovable.dev',
-      size: 280,
-      fgColor: settings.fgColor,
-      bgColor: settings.bgColor,
-      level: 'H' as const,
-      includeMargin: true,
-      imageSettings: settings.logo ? {
-        src: settings.logo,
-        height: settings.logoSize,
-        width: settings.logoSize,
-        excavate: true,
-      } : undefined,
-    };
-
-    return baseProps;
-  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 md:p-8">
@@ -242,19 +313,13 @@ export const QRCodeGenerator = () => {
               </div>
               
               {settings.logo && (
-                <div className="space-y-2 pt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Logo Size</span>
-                    <span className="text-sm font-mono text-foreground">{settings.logoSize}px</span>
-                  </div>
-                  <Slider
-                    value={[settings.logoSize]}
-                    onValueChange={([value]) => updateSetting('logoSize', value)}
-                    min={30}
-                    max={80}
-                    step={1}
-                    className="w-full"
+                <div className="flex items-center gap-3 pt-2">
+                  <img 
+                    src={settings.logo} 
+                    alt="Logo preview" 
+                    className="w-10 h-10 rounded-lg object-contain border border-border"
                   />
+                  <span className="text-sm text-muted-foreground">Logo uploaded</span>
                 </div>
               )}
             </div>
@@ -278,11 +343,9 @@ export const QRCodeGenerator = () => {
             
             <div 
               ref={qrRef}
-              className="relative p-6 rounded-2xl bg-card shadow-inner border border-border/50"
-              style={{ backgroundColor: settings.bgColor }}
-            >
-              <QRCodeCanvas {...getQRRenderProps()} />
-            </div>
+              className="relative p-6 rounded-2xl bg-card shadow-inner border border-border/50 flex items-center justify-center"
+              style={{ backgroundColor: settings.bgColor, minWidth: 310, minHeight: 310 }}
+            />
 
             <p className="mt-6 text-sm text-muted-foreground text-center max-w-xs">
               Scan with any QR reader to test your code
