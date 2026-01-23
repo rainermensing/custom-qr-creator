@@ -1,10 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import QRCodeStyling, { DotType, CornerSquareType, CornerDotType } from 'qr-code-styling';
-import { Download, Upload, Palette, Square, Circle, RectangleHorizontal, X } from 'lucide-react';
+import { Download, Upload, Palette, Square, Circle, RectangleHorizontal, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 
 type QRStyle = 'squares' | 'dots' | 'rounded';
@@ -17,6 +16,114 @@ interface QRSettings {
   logo: string | null;
   logoSize: number;
 }
+
+interface ExtractedColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+}
+
+const extractColorsFromImage = (imageSrc: string): Promise<ExtractedColors> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve({ primary: '#0D9488', secondary: '#14B8A6', accent: '#2DD4BF' });
+        return;
+      }
+
+      // Sample at a reasonable size
+      const sampleSize = 50;
+      canvas.width = sampleSize;
+      canvas.height = sampleSize;
+      ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
+
+      const imageData = ctx.getImageData(0, 0, sampleSize, sampleSize);
+      const pixels = imageData.data;
+
+      // Collect colors with their frequencies
+      const colorMap: Map<string, { r: number; g: number; b: number; count: number }> = new Map();
+
+      for (let i = 0; i < pixels.length; i += 4) {
+        const r = pixels[i];
+        const g = pixels[i + 1];
+        const b = pixels[i + 2];
+        const a = pixels[i + 3];
+
+        // Skip transparent and near-white/near-black pixels
+        if (a < 128) continue;
+        const brightness = (r + g + b) / 3;
+        if (brightness > 240 || brightness < 15) continue;
+
+        // Quantize colors to reduce noise
+        const qr = Math.round(r / 32) * 32;
+        const qg = Math.round(g / 32) * 32;
+        const qb = Math.round(b / 32) * 32;
+        const key = `${qr},${qg},${qb}`;
+
+        const existing = colorMap.get(key);
+        if (existing) {
+          existing.count++;
+          existing.r = (existing.r + r) / 2;
+          existing.g = (existing.g + g) / 2;
+          existing.b = (existing.b + b) / 2;
+        } else {
+          colorMap.set(key, { r, g, b, count: 1 });
+        }
+      }
+
+      // Sort by frequency and get top colors
+      const sortedColors = Array.from(colorMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      // Find colors with good saturation
+      const getSaturation = (r: number, g: number, b: number) => {
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        return max === 0 ? 0 : (max - min) / max;
+      };
+
+      const saturatedColors = sortedColors
+        .filter(c => getSaturation(c.r, c.g, c.b) > 0.2)
+        .slice(0, 3);
+
+      const toHex = (r: number, g: number, b: number) => 
+        '#' + [r, g, b].map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+
+      if (saturatedColors.length >= 1) {
+        resolve({
+          primary: toHex(saturatedColors[0].r, saturatedColors[0].g, saturatedColors[0].b),
+          secondary: saturatedColors[1] 
+            ? toHex(saturatedColors[1].r, saturatedColors[1].g, saturatedColors[1].b)
+            : toHex(saturatedColors[0].r * 0.8, saturatedColors[0].g * 0.8, saturatedColors[0].b * 0.8),
+          accent: saturatedColors[2]
+            ? toHex(saturatedColors[2].r, saturatedColors[2].g, saturatedColors[2].b)
+            : toHex(saturatedColors[0].r * 1.2, saturatedColors[0].g * 1.2, saturatedColors[0].b * 1.2),
+        });
+      } else if (sortedColors.length >= 1) {
+        resolve({
+          primary: toHex(sortedColors[0].r, sortedColors[0].g, sortedColors[0].b),
+          secondary: sortedColors[1] 
+            ? toHex(sortedColors[1].r, sortedColors[1].g, sortedColors[1].b)
+            : '#0D9488',
+          accent: sortedColors[2]
+            ? toHex(sortedColors[2].r, sortedColors[2].g, sortedColors[2].b)
+            : '#14B8A6',
+        });
+      } else {
+        resolve({ primary: '#0D9488', secondary: '#14B8A6', accent: '#2DD4BF' });
+      }
+    };
+    img.onerror = () => {
+      resolve({ primary: '#0D9488', secondary: '#14B8A6', accent: '#2DD4BF' });
+    };
+    img.src = imageSrc;
+  });
+};
 
 const getStyleConfig = (style: QRStyle): { dotsType: DotType; cornersSquareType: CornerSquareType; cornersDotType: CornerDotType } => {
   switch (style) {
@@ -98,6 +205,26 @@ const ColorPicker = ({
   </div>
 );
 
+const ColorSwatch = ({ 
+  color, 
+  onClick, 
+  active 
+}: { 
+  color: string; 
+  onClick: () => void; 
+  active: boolean;
+}) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      "w-10 h-10 rounded-lg border-2 transition-all duration-200 hover:scale-110",
+      active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"
+    )}
+    style={{ backgroundColor: color }}
+    title={color.toUpperCase()}
+  />
+);
+
 export const QRCodeGenerator = () => {
   const [settings, setSettings] = useState<QRSettings>({
     content: 'https://lovable.dev',
@@ -107,6 +234,8 @@ export const QRCodeGenerator = () => {
     logo: null,
     logoSize: 50,
   });
+
+  const [suggestedColors, setSuggestedColors] = useState<ExtractedColors | null>(null);
 
   const qrRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -183,12 +312,17 @@ export const QRCodeGenerator = () => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        updateSetting('logo', reader.result as string);
+      reader.onloadend = async () => {
+        const imageSrc = reader.result as string;
+        updateSetting('logo', imageSrc);
+        
+        // Extract colors from the uploaded image
+        const colors = await extractColorsFromImage(imageSrc);
+        setSuggestedColors(colors);
       };
       reader.readAsDataURL(file);
     }
@@ -196,6 +330,7 @@ export const QRCodeGenerator = () => {
 
   const removeLogo = () => {
     updateSetting('logo', null);
+    setSuggestedColors(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -251,6 +386,34 @@ export const QRCodeGenerator = () => {
                 onChange={(color) => updateSetting('bgColor', color)}
               />
             </div>
+
+            {/* Suggested Colors */}
+            {suggestedColors && (
+              <div className="space-y-3 p-4 rounded-xl bg-secondary/30 border border-border/50 animate-fade-in">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  Suggested colors from your logo
+                </div>
+                <div className="flex items-center gap-3">
+                  <ColorSwatch
+                    color={suggestedColors.primary}
+                    onClick={() => updateSetting('fgColor', suggestedColors.primary)}
+                    active={settings.fgColor.toLowerCase() === suggestedColors.primary.toLowerCase()}
+                  />
+                  <ColorSwatch
+                    color={suggestedColors.secondary}
+                    onClick={() => updateSetting('fgColor', suggestedColors.secondary)}
+                    active={settings.fgColor.toLowerCase() === suggestedColors.secondary.toLowerCase()}
+                  />
+                  <ColorSwatch
+                    color={suggestedColors.accent}
+                    onClick={() => updateSetting('fgColor', suggestedColors.accent)}
+                    active={settings.fgColor.toLowerCase() === suggestedColors.accent.toLowerCase()}
+                  />
+                  <span className="text-xs text-muted-foreground ml-2">Click to apply</span>
+                </div>
+              </div>
+            )}
 
             {/* Style Selection */}
             <div className="space-y-3">
