@@ -1,18 +1,22 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import QRCodeStyling, { DotType, CornerSquareType, CornerDotType } from 'qr-code-styling';
-import { Download, Upload, Palette, Square, Circle, RectangleHorizontal, X, Sparkles } from 'lucide-react';
+import { Download, Upload, Palette, Square, Circle, RectangleHorizontal, X, Sparkles, Blend, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 type QRStyle = 'squares' | 'dots' | 'rounded';
+type GradientType = 'none' | 'linear' | 'radial';
 
 interface QRSettings {
   content: string;
   fgColor: string;
+  fgColor2: string;
   bgColor: string;
   style: QRStyle;
+  gradientType: GradientType;
+  gradientRotation: number;
   logo: string | null;
   logoSize: number;
 }
@@ -229,8 +233,11 @@ export const QRCodeGenerator = () => {
   const [settings, setSettings] = useState<QRSettings>({
     content: 'https://lovable.dev',
     fgColor: '#0D9488',
+    fgColor2: '#2DD4BF',
     bgColor: '#FFFFFF',
     style: 'squares',
+    gradientType: 'none',
+    gradientRotation: 0,
     logo: null,
     logoSize: 50,
   });
@@ -241,24 +248,42 @@ export const QRCodeGenerator = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrCodeRef = useRef<QRCodeStyling | null>(null);
 
+  // Build gradient or solid color options
+  const getColorOptions = () => {
+    if (settings.gradientType === 'none') {
+      return { color: settings.fgColor };
+    }
+    return {
+      gradient: {
+        type: settings.gradientType,
+        rotation: settings.gradientRotation * (Math.PI / 180),
+        colorStops: [
+          { offset: 0, color: settings.fgColor },
+          { offset: 1, color: settings.fgColor2 },
+        ],
+      },
+    };
+  };
+
   // Initialize QR code
   useEffect(() => {
     const styleConfig = getStyleConfig(settings.style);
+    const colorOptions = getColorOptions();
     
     qrCodeRef.current = new QRCodeStyling({
       width: 280,
       height: 280,
       data: settings.content || 'https://lovable.dev',
       dotsOptions: {
-        color: settings.fgColor,
+        ...colorOptions,
         type: styleConfig.dotsType,
       },
       cornersSquareOptions: {
-        color: settings.fgColor,
+        ...colorOptions,
         type: styleConfig.cornersSquareType,
       },
       cornersDotOptions: {
-        color: settings.fgColor,
+        ...colorOptions,
         type: styleConfig.cornersDotType,
       },
       backgroundOptions: {
@@ -285,19 +310,20 @@ export const QRCodeGenerator = () => {
   useEffect(() => {
     if (qrCodeRef.current) {
       const styleConfig = getStyleConfig(settings.style);
+      const colorOptions = getColorOptions();
       
       qrCodeRef.current.update({
         data: settings.content || 'https://lovable.dev',
         dotsOptions: {
-          color: settings.fgColor,
+          ...colorOptions,
           type: styleConfig.dotsType,
         },
         cornersSquareOptions: {
-          color: settings.fgColor,
+          ...colorOptions,
           type: styleConfig.cornersSquareType,
         },
         cornersDotOptions: {
-          color: settings.fgColor,
+          ...colorOptions,
           type: styleConfig.cornersDotType,
         },
         backgroundOptions: {
@@ -441,6 +467,59 @@ export const QRCodeGenerator = () => {
                   Rounded
                 </StyleButton>
               </div>
+            </div>
+
+            {/* Gradient Options */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-muted-foreground">Color Mode</Label>
+              <div className="flex flex-wrap gap-2">
+                <StyleButton
+                  active={settings.gradientType === 'none'}
+                  onClick={() => updateSetting('gradientType', 'none')}
+                  icon={Square}
+                >
+                  Solid
+                </StyleButton>
+                <StyleButton
+                  active={settings.gradientType === 'linear'}
+                  onClick={() => updateSetting('gradientType', 'linear')}
+                  icon={Blend}
+                >
+                  Linear
+                </StyleButton>
+                <StyleButton
+                  active={settings.gradientType === 'radial'}
+                  onClick={() => updateSetting('gradientType', 'radial')}
+                  icon={Sun}
+                >
+                  Radial
+                </StyleButton>
+              </div>
+              
+              {settings.gradientType !== 'none' && (
+                <div className="space-y-4 pt-2 animate-fade-in">
+                  <ColorPicker
+                    label="Second Color"
+                    value={settings.fgColor2}
+                    onChange={(color) => updateSetting('fgColor2', color)}
+                  />
+                  {settings.gradientType === 'linear' && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        Rotation: {settings.gradientRotation}°
+                      </Label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="360"
+                        value={settings.gradientRotation}
+                        onChange={(e) => updateSetting('gradientRotation', parseInt(e.target.value))}
+                        className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Logo Upload */}
