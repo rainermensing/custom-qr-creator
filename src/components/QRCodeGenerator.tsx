@@ -178,6 +178,30 @@ const StyleButton = ({
   </button>
 );
 
+// ColorSwatch must be defined BEFORE ColorPicker since ColorPicker uses it
+const ColorSwatch = ({ 
+  color, 
+  onClick, 
+  active,
+  size = 'md',
+}: { 
+  color: string; 
+  onClick: () => void; 
+  active: boolean;
+  size?: 'sm' | 'md';
+}) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      "rounded-lg border-2 transition-all duration-200 hover:scale-110 flex-shrink-0",
+      size === 'sm' ? 'w-7 h-7' : 'w-10 h-10',
+      active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"
+    )}
+    style={{ backgroundColor: color }}
+    title={color.toUpperCase()}
+  />
+);
+
 const ColorPicker = ({ 
   label, 
   value, 
@@ -191,25 +215,25 @@ const ColorPicker = ({
 }) => (
   <div className="space-y-2">
     <Label className="text-sm font-medium text-muted-foreground">{label}</Label>
-    <div className="flex items-center gap-3">
-      <div className="relative">
+    <div className="flex items-center gap-2 flex-wrap">
+      <div className="relative flex-shrink-0">
         <input
           type="color"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-12 h-12 rounded-lg cursor-pointer border-2 border-border hover:border-primary/50 transition-colors"
+          className="w-10 h-10 rounded-lg cursor-pointer border-2 border-border hover:border-primary/50 transition-colors"
           style={{ padding: 0 }}
         />
       </div>
       <Input
         value={value.toUpperCase()}
         onChange={(e) => onChange(e.target.value)}
-        className="font-mono text-sm uppercase w-28"
+        className="font-mono text-sm uppercase w-24"
         maxLength={7}
       />
       {suggestedColors && (
-        <div className="flex items-center gap-1.5 ml-1">
-          <Sparkles className="w-3.5 h-3.5 text-primary" />
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0" />
           <ColorSwatch
             color={suggestedColors.primary}
             onClick={() => onChange(suggestedColors.primary)}
@@ -232,29 +256,6 @@ const ColorPicker = ({
       )}
     </div>
   </div>
-);
-
-const ColorSwatch = ({ 
-  color, 
-  onClick, 
-  active,
-  size = 'md',
-}: { 
-  color: string; 
-  onClick: () => void; 
-  active: boolean;
-  size?: 'sm' | 'md';
-}) => (
-  <button
-    onClick={onClick}
-    className={cn(
-      "rounded-lg border-2 transition-all duration-200 hover:scale-110",
-      size === 'sm' ? 'w-7 h-7' : 'w-10 h-10',
-      active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"
-    )}
-    style={{ backgroundColor: color }}
-    title={color.toUpperCase()}
-  />
 );
 
 export const QRCodeGenerator = () => {
@@ -338,7 +339,20 @@ export const QRCodeGenerator = () => {
   useEffect(() => {
     if (qrCodeRef.current) {
       const styleConfig = getStyleConfig(settings.style);
-      const colorOptions = getColorOptions();
+      
+      // Build color options inline to avoid stale closure
+      const colorOptions = settings.gradientType === 'none'
+        ? { color: settings.fgColor, gradient: undefined }
+        : {
+            gradient: {
+              type: settings.gradientType as 'linear' | 'radial',
+              rotation: settings.gradientRotation * (Math.PI / 180),
+              colorStops: [
+                { offset: 0, color: settings.fgColor },
+                { offset: 1, color: settings.fgColor2 },
+              ],
+            },
+          };
       
       qrCodeRef.current.update({
         data: settings.content || 'https://lovable.dev',
