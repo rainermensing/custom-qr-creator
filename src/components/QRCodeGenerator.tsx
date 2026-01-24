@@ -181,11 +181,13 @@ const StyleButton = ({
 const ColorPicker = ({ 
   label, 
   value, 
-  onChange 
+  onChange,
+  suggestedColors,
 }: { 
   label: string; 
   value: string; 
   onChange: (color: string) => void;
+  suggestedColors?: ExtractedColors | null;
 }) => (
   <div className="space-y-2">
     <Label className="text-sm font-medium text-muted-foreground">{label}</Label>
@@ -205,6 +207,29 @@ const ColorPicker = ({
         className="font-mono text-sm uppercase w-28"
         maxLength={7}
       />
+      {suggestedColors && (
+        <div className="flex items-center gap-1.5 ml-1">
+          <Sparkles className="w-3.5 h-3.5 text-primary" />
+          <ColorSwatch
+            color={suggestedColors.primary}
+            onClick={() => onChange(suggestedColors.primary)}
+            active={value.toLowerCase() === suggestedColors.primary.toLowerCase()}
+            size="sm"
+          />
+          <ColorSwatch
+            color={suggestedColors.secondary}
+            onClick={() => onChange(suggestedColors.secondary)}
+            active={value.toLowerCase() === suggestedColors.secondary.toLowerCase()}
+            size="sm"
+          />
+          <ColorSwatch
+            color={suggestedColors.accent}
+            onClick={() => onChange(suggestedColors.accent)}
+            active={value.toLowerCase() === suggestedColors.accent.toLowerCase()}
+            size="sm"
+          />
+        </div>
+      )}
     </div>
   </div>
 );
@@ -212,16 +237,19 @@ const ColorPicker = ({
 const ColorSwatch = ({ 
   color, 
   onClick, 
-  active 
+  active,
+  size = 'md',
 }: { 
   color: string; 
   onClick: () => void; 
   active: boolean;
+  size?: 'sm' | 'md';
 }) => (
   <button
     onClick={onClick}
     className={cn(
-      "w-10 h-10 rounded-lg border-2 transition-all duration-200 hover:scale-110",
+      "rounded-lg border-2 transition-all duration-200 hover:scale-110",
+      size === 'sm' ? 'w-7 h-7' : 'w-10 h-10',
       active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"
     )}
     style={{ backgroundColor: color }}
@@ -249,7 +277,7 @@ export const QRCodeGenerator = () => {
   const qrCodeRef = useRef<QRCodeStyling | null>(null);
 
   // Build gradient or solid color options
-  const getColorOptions = () => {
+  const getColorOptions = useCallback(() => {
     if (settings.gradientType === 'none') {
       return { color: settings.fgColor };
     }
@@ -263,7 +291,7 @@ export const QRCodeGenerator = () => {
         ],
       },
     };
-  };
+  }, [settings.gradientType, settings.fgColor, settings.fgColor2, settings.gradientRotation]);
 
   // Initialize QR code
   useEffect(() => {
@@ -405,6 +433,7 @@ export const QRCodeGenerator = () => {
                 label="Foreground"
                 value={settings.fgColor}
                 onChange={(color) => updateSetting('fgColor', color)}
+                suggestedColors={suggestedColors}
               />
               <ColorPicker
                 label="Background"
@@ -412,34 +441,6 @@ export const QRCodeGenerator = () => {
                 onChange={(color) => updateSetting('bgColor', color)}
               />
             </div>
-
-            {/* Suggested Colors */}
-            {suggestedColors && (
-              <div className="space-y-3 p-4 rounded-xl bg-secondary/30 border border-border/50 animate-fade-in">
-                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <Sparkles className="w-4 h-4 text-primary" />
-                  Suggested colors from your logo
-                </div>
-                <div className="flex items-center gap-3">
-                  <ColorSwatch
-                    color={suggestedColors.primary}
-                    onClick={() => updateSetting('fgColor', suggestedColors.primary)}
-                    active={settings.fgColor.toLowerCase() === suggestedColors.primary.toLowerCase()}
-                  />
-                  <ColorSwatch
-                    color={suggestedColors.secondary}
-                    onClick={() => updateSetting('fgColor', suggestedColors.secondary)}
-                    active={settings.fgColor.toLowerCase() === suggestedColors.secondary.toLowerCase()}
-                  />
-                  <ColorSwatch
-                    color={suggestedColors.accent}
-                    onClick={() => updateSetting('fgColor', suggestedColors.accent)}
-                    active={settings.fgColor.toLowerCase() === suggestedColors.accent.toLowerCase()}
-                  />
-                  <span className="text-xs text-muted-foreground ml-2">Click to apply</span>
-                </div>
-              </div>
-            )}
 
             {/* Style Selection */}
             <div className="space-y-3">
