@@ -260,7 +260,7 @@ const ColorPicker = ({
 
 export const QRCodeGenerator = () => {
   const [settings, setSettings] = useState<QRSettings>({
-    content: 'https://lovable.dev',
+    content: 'https://custom-qr-code.lovable.app',
     fgColor: '#0D9488',
     fgColor2: '#2DD4BF',
     bgColor: '#FFFFFF',
@@ -302,7 +302,7 @@ export const QRCodeGenerator = () => {
     qrCodeRef.current = new QRCodeStyling({
       width: 280,
       height: 280,
-      data: settings.content || 'https://lovable.dev',
+      data: settings.content || 'https://custom-qr-code.lovable.app',
       dotsOptions: {
         ...colorOptions,
         type: styleConfig.dotsType,
@@ -355,7 +355,7 @@ export const QRCodeGenerator = () => {
           };
       
       qrCodeRef.current.update({
-        data: settings.content || 'https://lovable.dev',
+        data: settings.content || 'https://custom-qr-code.lovable.app',
         dotsOptions: {
           ...colorOptions,
           type: styleConfig.dotsType,
