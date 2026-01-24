@@ -517,6 +517,7 @@ export const QRCodeGenerator = () => {
                     label="Second Color"
                     value={settings.fgColor2}
                     onChange={(color) => updateSetting('fgColor2', color)}
+                    suggestedColors={suggestedColors}
                   />
                   {settings.gradientType === 'linear' && (
                     <div className="space-y-2">
