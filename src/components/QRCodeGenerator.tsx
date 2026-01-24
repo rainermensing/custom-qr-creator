@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import lovableHeart from '@/assets/lovable-heart.svg';
 
 type QRStyle = 'squares' | 'dots' | 'rounded';
 type GradientType = 'none' | 'linear' | 'radial';
@@ -267,7 +268,7 @@ export const QRCodeGenerator = () => {
     style: 'squares',
     gradientType: 'none',
     gradientRotation: 0,
-    logo: null,
+    logo: lovableHeart,
     logoSize: 50,
   });
 
