@@ -405,11 +405,11 @@ export const QRCodeGenerator = () => {
     }
   };
 
-  const downloadQR = useCallback(() => {
+  const downloadQR = useCallback((format: 'png' | 'svg') => {
     if (qrCodeRef.current) {
       qrCodeRef.current.download({ 
         name: 'qr-code',
-        extension: 'png'
+        extension: format
       });
     }
   }, []);
@@ -583,14 +583,24 @@ export const QRCodeGenerator = () => {
               )}
             </div>
 
-            {/* Download Button */}
-            <Button
-              onClick={downloadQR}
-              className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 transition-all duration-200 glow-effect"
-            >
-              <Download className="w-5 h-5 mr-2" />
-              Download QR Code
-            </Button>
+            {/* Download Buttons */}
+            <div className="flex gap-3">
+              <Button
+                onClick={() => downloadQR('png')}
+                className="flex-1 h-12 text-base font-semibold bg-primary hover:bg-primary/90 transition-all duration-200 glow-effect"
+              >
+                <Download className="w-5 h-5 mr-2" />
+                Download PNG
+              </Button>
+              <Button
+                onClick={() => downloadQR('svg')}
+                variant="outline"
+                className="flex-1 h-12 text-base font-semibold transition-all duration-200"
+              >
+                <Download className="w-5 h-5 mr-2" />
+                Download SVG
+              </Button>
+            </div>
           </div>
 
           {/* Preview Panel */}
