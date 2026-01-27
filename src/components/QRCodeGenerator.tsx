@@ -1,11 +1,14 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import QRCodeStyling, { DotType, CornerSquareType, CornerDotType } from 'qr-code-styling';
-import { Download, Upload, Palette, Square, Circle, RectangleHorizontal, X, Sparkles, Blend, Sun } from 'lucide-react';
+import { Download, Upload, Palette, Square, Circle, RectangleHorizontal, X, Sparkles, Blend, Sun, Frame, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import lovableHeart from '@/assets/lovable-heart.svg';
+import { QRFrameWrapper, FrameStyle, CTAOption, CTA_OPTIONS, FRAME_OPTIONS } from './QRFrameWrapper';
+import html2canvas from 'html2canvas';
 
 type QRStyle = 'squares' | 'dots' | 'rounded';
 type GradientType = 'none' | 'linear' | 'radial';
@@ -20,6 +23,11 @@ interface QRSettings {
   gradientRotation: number;
   logo: string | null;
   logoSize: number;
+  frameStyle: FrameStyle;
+  frameColor: string;
+  ctaOption: CTAOption;
+  customCTA: string;
+  ctaColor: string;
 }
 
 interface ExtractedColors {
@@ -270,9 +278,15 @@ export const QRCodeGenerator = () => {
     gradientRotation: 0,
     logo: lovableHeart,
     logoSize: 50,
+    frameStyle: 'none',
+    frameColor: '#0D9488',
+    ctaOption: 'none',
+    customCTA: '',
+    ctaColor: '#FFFFFF',
   });
 
   const [suggestedColors, setSuggestedColors] = useState<ExtractedColors | null>(null);
+  const frameWrapperRef = useRef<HTMLDivElement>(null);
 
   const qrRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -405,14 +419,39 @@ export const QRCodeGenerator = () => {
     }
   };
 
-  const downloadQR = useCallback((format: 'png' | 'svg') => {
-    if (qrCodeRef.current) {
+  const downloadQR = useCallback(async (format: 'png' | 'svg') => {
+    const hasFrameOrCTA = settings.frameStyle !== 'none' || settings.ctaOption !== 'none';
+    
+    if (hasFrameOrCTA && frameWrapperRef.current) {
+      // Use html2canvas to capture the frame + QR code
+      try {
+        const canvas = await html2canvas(frameWrapperRef.current, {
+          backgroundColor: null,
+          scale: 3, // Higher resolution
+        });
+        
+        if (format === 'png') {
+          const link = document.createElement('a');
+          link.download = 'qr-code.png';
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        } else {
+          // For SVG with frame, we'll still export as PNG since html2canvas doesn't support SVG
+          const link = document.createElement('a');
+          link.download = 'qr-code.png';
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        }
+      } catch (error) {
+        console.error('Error capturing QR code:', error);
+      }
+    } else if (qrCodeRef.current) {
       qrCodeRef.current.download({ 
         name: 'qr-code',
         extension: format
       });
     }
-  }, []);
+  }, [settings.frameStyle, settings.ctaOption]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 md:p-8">
@@ -583,6 +622,110 @@ export const QRCodeGenerator = () => {
               )}
             </div>
 
+            {/* Frame & CTA Options */}
+            <div className="space-y-4 pt-2 border-t border-border">
+              <div className="flex items-center gap-2 pt-2">
+                <Frame className="w-4 h-4 text-primary" />
+                <Label className="text-sm font-medium">Frame & Call to Action</Label>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Frame Style</Label>
+                  <Select
+                    value={settings.frameStyle}
+                    onValueChange={(value: FrameStyle) => updateSetting('frameStyle', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FRAME_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Call to Action</Label>
+                  <Select
+                    value={settings.ctaOption}
+                    onValueChange={(value: CTAOption) => updateSetting('ctaOption', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CTA_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {settings.ctaOption === 'custom' && (
+                <div className="space-y-2 animate-fade-in">
+                  <Label className="text-sm text-muted-foreground">Custom Text</Label>
+                  <Input
+                    value={settings.customCTA}
+                    onChange={(e) => updateSetting('customCTA', e.target.value)}
+                    placeholder="Enter your text..."
+                    maxLength={30}
+                  />
+                </div>
+              )}
+              
+              {(settings.frameStyle !== 'none' || settings.ctaOption !== 'none') && (
+                <div className="grid grid-cols-2 gap-4 animate-fade-in">
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">Frame Color</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={settings.frameColor}
+                        onChange={(e) => updateSetting('frameColor', e.target.value)}
+                        className="w-10 h-10 rounded-lg cursor-pointer border-2 border-border hover:border-primary/50 transition-colors"
+                        style={{ padding: 0 }}
+                      />
+                      <Input
+                        value={settings.frameColor.toUpperCase()}
+                        onChange={(e) => updateSetting('frameColor', e.target.value)}
+                        className="font-mono text-sm uppercase w-24"
+                        maxLength={7}
+                      />
+                    </div>
+                  </div>
+                  
+                  {settings.ctaOption !== 'none' && (
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">Text Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={settings.ctaColor}
+                          onChange={(e) => updateSetting('ctaColor', e.target.value)}
+                          className="w-10 h-10 rounded-lg cursor-pointer border-2 border-border hover:border-primary/50 transition-colors"
+                          style={{ padding: 0 }}
+                        />
+                        <Input
+                          value={settings.ctaColor.toUpperCase()}
+                          onChange={(e) => updateSetting('ctaColor', e.target.value)}
+                          className="font-mono text-sm uppercase w-24"
+                          maxLength={7}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Download Buttons */}
             <div className="flex gap-3">
               <Button
@@ -610,11 +753,19 @@ export const QRCodeGenerator = () => {
               <span className="text-sm font-medium">Live Preview</span>
             </div>
             
-            <div 
-              ref={qrRef}
-              className="relative p-6 rounded-2xl bg-card shadow-inner border border-border/50 flex items-center justify-center"
-              style={{ backgroundColor: settings.bgColor, minWidth: 310, minHeight: 310 }}
-            />
+            <div className="relative p-4 rounded-2xl bg-card shadow-inner border border-border/50 flex items-center justify-center">
+              <QRFrameWrapper
+                ref={frameWrapperRef}
+                frameStyle={settings.frameStyle}
+                frameColor={settings.frameColor}
+                ctaOption={settings.ctaOption}
+                customCTA={settings.customCTA}
+                ctaColor={settings.ctaColor}
+                bgColor={settings.bgColor}
+              >
+                <div ref={qrRef} />
+              </QRFrameWrapper>
+            </div>
 
             <p className="mt-6 text-sm text-muted-foreground text-center max-w-xs">
               Scan with any QR reader to test your code
