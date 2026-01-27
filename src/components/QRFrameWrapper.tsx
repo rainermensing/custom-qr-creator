@@ -33,14 +33,7 @@ export const QRFrameWrapper = forwardRef<HTMLDivElement, QRFrameWrapperProps>(
   ({ frameStyle, frameColor, ctaOption, customCTA, ctaColor, children, bgColor }, ref) => {
     const ctaText = getCTAText(ctaOption, customCTA);
     const showCTA = ctaOption !== 'none' && ctaText;
-
-    if (frameStyle === 'none' && !showCTA) {
-      return (
-        <div ref={ref} className="inline-block" style={{ backgroundColor: bgColor }}>
-          {children}
-        </div>
-      );
-    }
+    const hasFrame = frameStyle !== 'none';
 
     const frameStyles: Record<FrameStyle, string> = {
       none: '',
@@ -55,10 +48,10 @@ export const QRFrameWrapper = forwardRef<HTMLDivElement, QRFrameWrapperProps>(
         ref={ref}
         className={cn(
           'inline-flex flex-col items-center',
-          frameStyles[frameStyle]
+          hasFrame && frameStyles[frameStyle]
         )}
         style={{ 
-          borderColor: frameStyle !== 'none' ? frameColor : 'transparent',
+          borderColor: hasFrame ? frameColor : 'transparent',
           backgroundColor: bgColor,
         }}
       >
@@ -74,7 +67,7 @@ export const QRFrameWrapper = forwardRef<HTMLDivElement, QRFrameWrapperProps>(
         
         <div className={cn(
           'flex items-center justify-center',
-          frameStyle !== 'none' ? 'p-3' : '',
+          hasFrame ? 'p-3' : '',
           frameStyle === 'ticket' ? 'pt-2 pb-2' : ''
         )}>
           {children}
@@ -88,7 +81,7 @@ export const QRFrameWrapper = forwardRef<HTMLDivElement, QRFrameWrapperProps>(
               frameStyle === 'badge' ? 'rounded-b-xl' : ''
             )}
             style={{ 
-              backgroundColor: frameStyle !== 'none' ? frameColor : 'transparent',
+              backgroundColor: hasFrame ? frameColor : 'transparent',
               color: ctaColor,
             }}
           >
