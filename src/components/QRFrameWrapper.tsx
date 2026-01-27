@@ -54,7 +54,7 @@ export const QRFrameWrapper = forwardRef<HTMLDivElement, QRFrameWrapperProps>(
       <div
         ref={ref}
         className={cn(
-          'inline-flex flex-col items-center overflow-hidden',
+          'inline-flex flex-col items-center',
           frameStyles[frameStyle]
         )}
         style={{ 
@@ -73,6 +73,7 @@ export const QRFrameWrapper = forwardRef<HTMLDivElement, QRFrameWrapperProps>(
         )}
         
         <div className={cn(
+          'flex items-center justify-center',
           frameStyle !== 'none' ? 'p-3' : '',
           frameStyle === 'ticket' ? 'pt-2 pb-2' : ''
         )}>
