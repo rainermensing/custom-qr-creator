@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import QRCodeStyling, { DotType, CornerSquareType, CornerDotType } from 'qr-code-styling';
-import { Download, Upload, Palette, Square, Circle, RectangleHorizontal, X, Sparkles, Blend, Sun, Frame, MessageSquare } from 'lucide-react';
+import { Download, Upload, Palette, Square, Circle, RectangleHorizontal, X, Sparkles, Blend, Sun, Frame, MessageSquare, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -461,9 +461,18 @@ export const QRCodeGenerator = () => {
           <h1 className="text-4xl md:text-5xl font-bold mb-3">
             <span className="gradient-text">QR Code</span> Generator
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-lg mb-4">
             Create beautiful, customized QR codes in seconds
           </p>
+          <a
+            href="https://github.com/rainermensing/custom-qr-creator"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Github className="w-4 h-4" />
+            View on GitHub
+          </a>
         </div>
 
         {/* Main Content */}
