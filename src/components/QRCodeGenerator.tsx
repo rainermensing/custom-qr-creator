@@ -292,6 +292,13 @@ export const QRCodeGenerator = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrCodeRef = useRef<QRCodeStyling | null>(null);
 
+  // Extract colors from the default Lovable logo on mount
+  useEffect(() => {
+    if (settings.logo === lovableHeart) {
+      extractColorsFromImage(lovableHeart).then(setSuggestedColors);
+    }
+  }, []);
+
   // Build gradient or solid color options
   const getColorOptions = useCallback(() => {
     if (settings.gradientType === 'none') {
@@ -694,12 +701,12 @@ export const QRCodeGenerator = () => {
                 <div className="grid grid-cols-2 gap-4 animate-fade-in">
                   <div className="space-y-2">
                     <Label className="text-sm text-muted-foreground">Frame Color</Label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <input
                         type="color"
                         value={settings.frameColor}
                         onChange={(e) => updateSetting('frameColor', e.target.value)}
-                        className="w-10 h-10 rounded-lg cursor-pointer border-2 border-border hover:border-primary/50 transition-colors"
+                        className="w-10 h-10 rounded-lg cursor-pointer border-2 border-border hover:border-primary/50 transition-colors flex-shrink-0"
                         style={{ padding: 0 }}
                       />
                       <Input
@@ -708,6 +715,29 @@ export const QRCodeGenerator = () => {
                         className="font-mono text-sm uppercase w-24"
                         maxLength={7}
                       />
+                      {suggestedColors && (
+                        <div className="flex items-center gap-1.5 w-full mt-1">
+                          <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                          <ColorSwatch
+                            color={suggestedColors.primary}
+                            onClick={() => updateSetting('frameColor', suggestedColors.primary)}
+                            active={settings.frameColor.toLowerCase() === suggestedColors.primary.toLowerCase()}
+                            size="sm"
+                          />
+                          <ColorSwatch
+                            color={suggestedColors.secondary}
+                            onClick={() => updateSetting('frameColor', suggestedColors.secondary)}
+                            active={settings.frameColor.toLowerCase() === suggestedColors.secondary.toLowerCase()}
+                            size="sm"
+                          />
+                          <ColorSwatch
+                            color={suggestedColors.accent}
+                            onClick={() => updateSetting('frameColor', suggestedColors.accent)}
+                            active={settings.frameColor.toLowerCase() === suggestedColors.accent.toLowerCase()}
+                            size="sm"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                   
