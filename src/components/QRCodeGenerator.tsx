@@ -270,8 +270,8 @@ const ColorPicker = ({
 export const QRCodeGenerator = () => {
   const [settings, setSettings] = useState<QRSettings>({
     content: 'https://custom-qr-code.lovable.app',
-    fgColor: '#0D9488',
-    fgColor2: '#2DD4BF',
+    fgColor: '#FF560E',
+    fgColor2: '#736EF8',
     bgColor: '#FFFFFF',
     style: 'squares',
     gradientType: 'none',
@@ -279,7 +279,7 @@ export const QRCodeGenerator = () => {
     logo: lovableHeart,
     logoSize: 50,
     frameStyle: 'none',
-    frameColor: '#0D9488',
+    frameColor: '#FF560E',
     ctaOption: 'none',
     customCTA: '',
     ctaColor: '#FFFFFF',
