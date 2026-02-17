@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import QRCodeStyling, { DotType, CornerSquareType, CornerDotType } from 'qr-code-styling';
-import { Download, Upload, Palette, Square, Circle, RectangleHorizontal, X, Sparkles, Blend, Sun, Frame, MessageSquare, Github } from 'lucide-react';
+import { Download, Upload, Palette, Square, Circle, RectangleHorizontal, X, Sparkles, Blend, Sun, Frame, MessageSquare, Github, Maximize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import lovableHeart from '@/assets/lovable-heart.svg';
 import { QRFrameWrapper, FrameStyle, CTAOption, CTA_OPTIONS, FRAME_OPTIONS } from './QRFrameWrapper';
+import { Slider } from '@/components/ui/slider';
 import html2canvas from 'html2canvas';
 
 type QRStyle = 'squares' | 'dots' | 'rounded';
@@ -286,6 +287,7 @@ export const QRCodeGenerator = () => {
   });
 
   const [suggestedColors, setSuggestedColors] = useState<ExtractedColors | null>(null);
+  const [exportSize, setExportSize] = useState(1024);
   const frameWrapperRef = useRef<HTMLDivElement>(null);
 
   const qrRef = useRef<HTMLDivElement>(null);
@@ -430,35 +432,59 @@ export const QRCodeGenerator = () => {
     const hasFrameOrCTA = settings.frameStyle !== 'none' || settings.ctaOption !== 'none';
     
     if (hasFrameOrCTA && frameWrapperRef.current) {
-      // Use html2canvas to capture the frame + QR code
       try {
+        // Calculate scale based on desired export size relative to rendered size
+        const renderedWidth = frameWrapperRef.current.offsetWidth;
+        const scale = Math.max(1, exportSize / renderedWidth);
+        
         const canvas = await html2canvas(frameWrapperRef.current, {
           backgroundColor: null,
-          scale: 3, // Higher resolution
+          scale,
         });
         
-        if (format === 'png') {
-          const link = document.createElement('a');
-          link.download = 'qr-code.png';
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-        } else {
-          // For SVG with frame, we'll still export as PNG since html2canvas doesn't support SVG
-          const link = document.createElement('a');
-          link.download = 'qr-code.png';
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-        }
+        const link = document.createElement('a');
+        link.download = `qr-code.${format === 'svg' ? 'png' : 'png'}`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
       } catch (error) {
         console.error('Error capturing QR code:', error);
       }
     } else if (qrCodeRef.current) {
-      qrCodeRef.current.download({ 
-        name: 'qr-code',
-        extension: format
-      });
+      if (format === 'png') {
+        // Re-create at export size for high-res download
+        const styleConfig = getStyleConfig(settings.style);
+        const colorOptions = settings.gradientType === 'none'
+          ? { color: settings.fgColor, gradient: undefined }
+          : {
+              gradient: {
+                type: settings.gradientType as 'linear' | 'radial',
+                rotation: settings.gradientRotation * (Math.PI / 180),
+                colorStops: [
+                  { offset: 0, color: settings.fgColor },
+                  { offset: 1, color: settings.fgColor2 },
+                ],
+              },
+            };
+        
+        const exportQR = new QRCodeStyling({
+          width: exportSize,
+          height: exportSize,
+          data: settings.content || 'https://custom-qr-code.lovable.app',
+          dotsOptions: { ...colorOptions, type: styleConfig.dotsType },
+          cornersSquareOptions: { ...colorOptions, type: styleConfig.cornersSquareType },
+          cornersDotOptions: { ...colorOptions, type: styleConfig.cornersDotType },
+          backgroundOptions: { color: settings.bgColor },
+          imageOptions: { crossOrigin: 'anonymous', margin: 8, imageSize: 0.4 },
+          image: settings.logo || undefined,
+          qrOptions: { errorCorrectionLevel: 'H' },
+        });
+        
+        exportQR.download({ name: 'qr-code', extension: 'png' });
+      } else {
+        qrCodeRef.current.download({ name: 'qr-code', extension: 'svg' });
+      }
     }
-  }, [settings.frameStyle, settings.ctaOption]);
+  }, [settings, exportSize]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 md:p-8">
@@ -763,6 +789,29 @@ export const QRCodeGenerator = () => {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Export Resolution */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Maximize className="w-4 h-4" />
+                  Export Resolution
+                </Label>
+                <span className="text-sm font-mono text-foreground">{exportSize} × {exportSize}px</span>
+              </div>
+              <Slider
+                value={[exportSize]}
+                onValueChange={([v]) => setExportSize(v)}
+                min={256}
+                max={2048}
+                step={128}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>256px</span>
+                <span>2048px</span>
+              </div>
             </div>
 
             {/* Download Buttons */}
