@@ -692,7 +692,7 @@ export const QRCodeGenerator = () => {
                     value={settings.customCTA}
                     onChange={(e) => updateSetting('customCTA', e.target.value)}
                     placeholder="Enter your text..."
-                    maxLength={30}
+                    maxLength={100}
                   />
                 </div>
               )}
