@@ -67,10 +67,8 @@ const extractColorsFromImage = (imageSrc: string): Promise<ExtractedColors> => {
         const b = pixels[i + 2];
         const a = pixels[i + 3];
 
-        // Skip transparent and near-white/near-black pixels
+        // Skip transparent pixels
         if (a < 128) continue;
-        const brightness = (r + g + b) / 3;
-        if (brightness > 240 || brightness < 15) continue;
 
         // Quantize colors to reduce noise
         const qr = Math.round(r / 32) * 32;
@@ -119,14 +117,14 @@ const extractColorsFromImage = (imageSrc: string): Promise<ExtractedColors> => {
             : toHex(saturatedColors[0].r * 1.2, saturatedColors[0].g * 1.2, saturatedColors[0].b * 1.2),
         });
       } else if (sortedColors.length >= 1) {
+        // For monochrome/low-saturation images, use the dominant tones
+        const c = sortedColors[0];
+        const c2 = sortedColors[1] || c;
+        const c3 = sortedColors[2] || sortedColors[1] || c;
         resolve({
-          primary: toHex(sortedColors[0].r, sortedColors[0].g, sortedColors[0].b),
-          secondary: sortedColors[1] 
-            ? toHex(sortedColors[1].r, sortedColors[1].g, sortedColors[1].b)
-            : '#0D9488',
-          accent: sortedColors[2]
-            ? toHex(sortedColors[2].r, sortedColors[2].g, sortedColors[2].b)
-            : '#14B8A6',
+          primary: toHex(c.r, c.g, c.b),
+          secondary: toHex(c2.r, c2.g, c2.b),
+          accent: toHex(c3.r, c3.g, c3.b),
         });
       } else {
         resolve({ primary: '#0D9488', secondary: '#14B8A6', accent: '#2DD4BF' });
